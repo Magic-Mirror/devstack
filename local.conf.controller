@@ -1,0 +1,42 @@
+[[local|localrc]]
+
+# Basic Setup
+HOST_IP=<HOST_IP>
+ADMIN_PASSWORD=<PASSWORD>
+MYSQL_PASSWORD=<PASSWORD>
+SERVICE_PASSWORD=<PASSWORD>
+SERVICE_TOKEN=<SERVICE_TOKEN>
+RABBIT_PASSWORD=<PASSWORD>
+
+IMAGE_URLS+=",http://download.fedoraproject.org/pub/fedora/linux/releases/21/Cloud/Images/x86_64/Fedora-Cloud-Base-20141203-21.x86_64.qcow2"
+
+# Logging
+LOGFILE=/opt/stack/logs/stack.sh.log
+SYSLOG=True
+
+# Neutron Setup
+disable_service n-net
+ENABLED_SERVICES+=,q-agt,q-l3,q-svc,q-dhcp,q-meta,neutron
+
+OVS_PHYSICAL_BRIDGE=br-ex
+PUBLIC_INTERFACE=<ETH0>
+
+Q_USE_PROVIDERNET_FOR_PUBLIC=True
+PUBLIC_BRIDGE=br-ex
+OVS_BRIDGE_MAPPINGS=public:br-ex
+
+# Network Setup
+PUBLIC_NETWORK_GATEWAY=<GATEWAY_IP_ADDR>
+FLOATING_RANGE=<GATEWAY_IP_RANGE>
+
+# Heat
+enable_service heat h-eng h-api h-api-cfn h-api-cw
+
+# Ceilometer
+enable_service ceilometer-anotification ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api
+enable_service ceilometer-alarm-notifier ceilometer-alarm-evaluator
+CEILOMETER_NOTIFICATION_TOPICS=notifications,profiler
+
+# Multi Node Setup
+MULTI_HOST=1
+FLAT_INTERFACE=<ETH1>
