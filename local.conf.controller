@@ -16,11 +16,9 @@ SYSLOG=True
 
 # Neutron Setup
 disable_service n-net
-ENABLED_SERVICES+=,q-agt,q-l3,q-svc,q-dhcp,q-meta,neutron
+ENABLED_SERVICES+=,q-svc,q-dhcp,q-meta,neutron,q-l3,q-agt
 
 OVS_PHYSICAL_BRIDGE=br-ex
-PUBLIC_INTERFACE=<ETH0>
-
 Q_USE_PROVIDERNET_FOR_PUBLIC=True
 PUBLIC_BRIDGE=br-ex
 OVS_BRIDGE_MAPPINGS=public:br-ex
@@ -40,3 +38,18 @@ CEILOMETER_NOTIFICATION_TOPICS=notifications,profiler
 # Multi Node Setup
 MULTI_HOST=1
 FLAT_INTERFACE=<ETH1>
+
+# ODL
+Q_ML2_PLUGIN_MECHANISM_DRIVERS=opendaylight,logger
+enable_plugin networking-odl https://github.com/openstack/networking-odl
+ODL_L3=False
+ML2_L3_PLUGIN="neutron.services.l3_router.l3_router_plugin.L3RouterPlugin"
+
+[[post-config|/etc/neutron/plugins/ml2/ml2_conf.ini]]
+[agent]
+minimize_polling=True
+
+[ml2_odl]
+url=http://$HOST_IP:8087/controller/nb/v2/neutron
+username=admin
+password=admin

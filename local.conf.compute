@@ -32,8 +32,23 @@ SYSLOG=True
 disable_service n-net
 ENABLED_SERVICES+=,q-agt,neutron
 
+# Ceilometer
 enable_service ceilometer-acompute
 
 FLAT_INTERFACE=<ETH1>
 OVS_PHYSICAL_BRIDGE=br-int
 
+# ODL
+Q_ML2_PLUGIN_MECHANISM_DRIVERS=opendaylight,logger
+enable_plugin networking-odl https://github.com/openstack/networking-odl
+# Networking-odl Compute Node settting
+ODL_MODE=compute
+
+[[post-config|/etc/neutron/plugins/ml2/ml2_conf.ini]]
+[agent]
+minimize_polling=True
+
+[ml2_odl]
+url=http://$SERVICE_HOST:8087/controller/nb/v2/neutron
+username=admin
+password=admin
