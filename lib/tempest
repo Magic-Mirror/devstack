@@ -333,6 +333,7 @@ function configure_tempest {
     if is_ssl_enabled_service "key" || is_service_enabled tls-proxy; then
         iniset $TEMPEST_CONFIG identity ca_certificates_file $SSL_BUNDLE_FILE
     fi
+    iniset $TEMPEST_CONFIG identity identity-feature-enabled api_extensions OS-EC2
 
     # Image
     # We want to be able to override this variable in the gate to avoid
@@ -357,9 +358,6 @@ function configure_tempest {
     iniset $TEMPEST_CONFIG compute flavor_ref $flavor_ref
     iniset $TEMPEST_CONFIG compute flavor_ref_alt $flavor_ref_alt
     iniset $TEMPEST_CONFIG compute ssh_connect_method $ssh_connect_method
-    # set the equiv validation option here as well to ensure they are
-    # in sync. They shouldn't be separate options.
-    iniset $TEMPEST_CONFIG validation connect_method $ssh_connect_method
     if [[ ! $(is_service_enabled n-cell) && ! $(is_service_enabled neutron) ]]; then
         iniset $TEMPEST_CONFIG compute fixed_network_name $PRIVATE_NETWORK_NAME
     fi
