@@ -37,6 +37,10 @@ CEILOMETER_NOTIFICATION_TOPICS=notifications,profiler
 
 # Tacker
 enable_plugin tacker https://github.com/Magic-Mirror/tacker stable/liberty
+TACKERCLIENT_REPO=https://github.com/Magic-Mirror/python-tackerclient.git
+TACKERCLIENT_BRANCH=stable/liberty
+TACKERHORIZON_REPO=https://github.com/Magic-Mirror/tacker-horizon.git
+TACKERHORZION_BRANCH=stable/liberty
 
 # Murano
 enable_plugin murano git://git.openstack.org/openstack/murano stable/liberty
