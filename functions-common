@@ -1023,7 +1023,7 @@ function apt_get {
     $sudo DEBIAN_FRONTEND=noninteractive \
         http_proxy=${http_proxy:-} https_proxy=${https_proxy:-} \
         no_proxy=${no_proxy:-} \
-        apt-get --option "Dpkg::Options::=--force-confold" --assume-yes "$@"
+        apt-get --option "Dpkg::Options::=--force-confold" --assume-yes "$@" < /dev/null
 }
 
 function _parse_package_files {
@@ -1154,7 +1154,7 @@ function get_plugin_packages {
     local package_dir=""
     for plugin in ${DEVSTACK_PLUGINS//,/ }; do
         local package_dir="$(_get_package_dir ${GITDIR[$plugin]}/devstack/files)"
-        files_to_parse+="$package_dir/$plugin"
+        files_to_parse+=" $package_dir/$plugin"
     done
     echo "$(_parse_package_files $files_to_parse)"
     $xtrace
