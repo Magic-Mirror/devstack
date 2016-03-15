@@ -16,7 +16,9 @@ SYSLOG=True
 
 # Neutron Setup
 disable_service n-net
-ENABLED_SERVICES+=,q-svc,q-dhcp,q-meta,neutron,q-l3,q-agt,q-fwaas,q-lbaas
+ENABLED_SERVICES+=,q-svc,q-dhcp,q-meta,neutron
+disable_service q-agt
+disable_service q-l3
 
 OVS_PHYSICAL_BRIDGE=br-ex
 Q_USE_PROVIDERNET_FOR_PUBLIC=True
@@ -75,7 +77,7 @@ FLAT_INTERFACE=<ETH1>
 # ODL
 Q_ML2_PLUGIN_MECHANISM_DRIVERS=opendaylight_v2,logger
 enable_plugin networking-odl https://bitbucket.org/magic-mirror/networking-odl magic-mirror
-ODL_RELEASE=beryllium-snapshot-0.4.1
+ODL_RELEASE=boron-snapshot-0.5.0
 ODL_L3=True
 ODL_PROVIDER_MAPPINGS=br-ex:eth0
 
@@ -104,7 +106,7 @@ infra_driver = netvirtsfc
 
 [sfc_opendaylight]
 ip = $HOST_IP
-port = 8080
+port = 8087
 username = admin
 password = admin
 
