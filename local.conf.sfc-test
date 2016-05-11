@@ -1,0 +1,115 @@
+[[local|localrc]]
+
+# Basic Setup
+HOST_IP=192.168.61.129
+ADMIN_PASSWORD=1234
+MYSQL_PASSWORD=1234
+SERVICE_PASSWORD=1234
+SERVICE_TOKEN=service_token
+RABBIT_PASSWORD=1234
+
+IMAGE_URLS+=",http://download.fedoraproject.org/pub/fedora/linux/releases/21/Cloud/Images/x86_64/Fedora-Cloud-Base-20141203-21.x86_64.qcow2"
+
+# Logging
+LOGFILE=/opt/stack/logs/stack.sh.log
+SYSLOG=True
+
+# Neutron Setup
+disable_service n-net
+ENABLED_SERVICES+=,q-svc,q-dhcp,q-meta,neutron
+disable_service q-agt
+disable_service q-l3
+
+OVS_PHYSICAL_BRIDGE=br-ex
+Q_USE_PROVIDERNET_FOR_PUBLIC=True
+PUBLIC_BRIDGE=br-ex
+OVS_BRIDGE_MAPPINGS=public:br-ex
+
+# Network Setup
+PUBLIC_NETWORK_GATEWAY=192.168.61.2
+FLOATING_RANGE=192.168.61.0/24
+
+# Heat
+enable_service heat h-eng h-api h-api-cfn h-api-cw
+
+# Ceilometer
+enable_service ceilometer-anotification ceilometer-acompute ceilometer-acentral ceilometer-collector ceilometer-api
+enable_service ceilometer-alarm-notifier ceilometer-alarm-evaluator
+CEILOMETER_NOTIFICATION_TOPICS=notifications,profiler
+
+# Tacker
+enable_plugin tacker https://github.com/Magic-Mirror/tacker stable/liberty
+TACKERCLIENT_REPO=https://github.com/Magic-Mirror/python-tackerclient.git
+TACKERCLIENT_BRANCH=stable/liberty
+TACKERHORIZON_REPO=https://github.com/Magic-Mirror/tacker-horizon.git
+TACKERHORZION_BRANCH=stable/liberty
+
+# Murano
+#enable_plugin murano git://git.openstack.org/openstack/murano stable/liberty
+#enable_service murano-cfapi
+#MURANO_APPS=io.murano.apps.apache.Tomcat,io.murano.apps.Guacamole
+
+# Solum
+#enable_plugin solum https://bitbucket.org/magic-mirror/solum magic-mirror
+
+# Nova-Docker
+#enable_plugin nova-docker https://git.openstack.org/openstack/nova-docker stable/liberty
+#GITDIR['nova-docker']=/opt/stack/nova-docker
+
+# Swift
+#SWIFT_HASH=096d08da4f8d4cce3a724c5f6c18f055
+#SWIFT_LOOPBACK_DISK_SIZE=50G
+
+# Cinder setup
+VOLUME_BACKING_FILE_SIZE=40G
+
+# Networking-sfc
+#enable_plugin networking-sfc git://git.openstack.org/openstack/networking-sfc stable/liberty
+
+# Disable security groups
+#Q_USE_SECGROUP=False
+#LIBVIRT_FIREWALL_DRIVER=nova.virt.firewall.NoopFirewallDriver
+
+# Multi Node Setup
+#MULTI_HOST=1
+#FLAT_INTERFACE=<ETH1>
+
+#RECLONE=True
+
+# ODL
+Q_ML2_PLUGIN_MECHANISM_DRIVERS=opendaylight_v2,logger
+enable_plugin networking-odl https://bitbucket.org/magic-mirror/networking-odl magic-mirror
+#ODL_RELEASE=boron-snapshot-0.5.0
+#ODL_RELEASE=beryllium-sfc-0.2.1-SR1
+ODL_L3=True
+ODL_PROVIDER_MAPPINGS=br-ex:eth0
+
+[[post-config|/etc/neutron/plugins/ml2/ml2_conf.ini]]
+[agent]
+minimize_polling=True
+
+[ml2_odl]
+url=http://$HOST_IP:8087/controller/nb/v2/neutron
+username=admin
+password=admin
+
+[[post-config|/etc/tacker/tacker.conf]]
+[DEFAULT]
+service_plugins = tacker.vm.plugin.VNFMPlugin,tacker.sfc.plugin.SFCPlugin,tacker.sfc_classifier.plugin.SFCCPlugin
+[servicevm]
+infra_driver = heat
+[servicevm_heat]
+stack_retries = 10
+stack_retry_wait = 30
+[sfc]
+infra_driver = opendaylight
+
+[sfc_classifier]
+infra_driver = netvirtsfc
+
+[sfc_opendaylight]
+ip = $HOST_IP
+port = 8087
+username = admin
+password = admin
+
