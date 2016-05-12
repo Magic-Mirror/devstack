@@ -59,7 +59,6 @@ IRONIC_HW_EPHEMERAL_DISK=${IRONIC_HW_EPHEMERAL_DISK:-0}
 IRONIC_IPMIINFO_FILE=${IRONIC_IPMIINFO_FILE:-$IRONIC_DATA_DIR/hardware_info}
 
 # Set up defaults for functional / integration testing
-IRONIC_NODE_UUID=${IRONIC_NODE_UUID:-`uuidgen`}
 IRONIC_SCRIPTS_DIR=${IRONIC_SCRIPTS_DIR:-$TOP_DIR/tools/ironic/scripts}
 IRONIC_TEMPLATES_DIR=${IRONIC_TEMPLATES_DIR:-$TOP_DIR/tools/ironic/templates}
 IRONIC_BAREMETAL_BASIC_OPS=$(trueorfalse False IRONIC_BAREMETAL_BASIC_OPS)
@@ -97,8 +96,11 @@ IRONIC_DEPLOY_RAMDISK=${IRONIC_DEPLOY_RAMDISK:-}
 IRONIC_DEPLOY_KERNEL=${IRONIC_DEPLOY_KERNEL:-}
 IRONIC_DEPLOY_ELEMENT=${IRONIC_DEPLOY_ELEMENT:-deploy-ironic}
 
-IRONIC_AGENT_KERNEL_URL=${IRONIC_AGENT_KERNEL_URL:-http://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe.vmlinuz}
-IRONIC_AGENT_RAMDISK_URL=${IRONIC_AGENT_RAMDISK_URL:-http://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe_image-oem.cpio.gz}
+# NOTE(jroll) this needs to be updated when stable branches are cut
+IPA_DOWNLOAD_BRANCH=${IPA_DOWNLOAD_BRANCH:-stable/liberty}
+IPA_DOWNLOAD_BRANCH=$(echo $IPA_DOWNLOAD_BRANCH | tr / -)
+IRONIC_AGENT_KERNEL_URL=${IRONIC_AGENT_KERNEL_URL:-http://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe-${IPA_DOWNLOAD_BRANCH}.vmlinuz}
+IRONIC_AGENT_RAMDISK_URL=${IRONIC_AGENT_RAMDISK_URL:-http://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe_image-oem-${IPA_DOWNLOAD_BRANCH}.cpio.gz}
 
 # Which deploy driver to use - valid choices right now
 # are ``pxe_ssh``, ``pxe_ipmitool``, ``agent_ssh`` and ``agent_ipmitool``.
@@ -349,7 +351,7 @@ function configure_ironic_conductor {
     if [[ "$IRONIC_VM_LOG_CONSOLE" == "True" ]] ; then
         pxe_params+="nofb nomodeset vga=normal console=ttyS0"
         if is_deployed_with_ipa_ramdisk; then
-            pxe_params+=" systemd.journald.forward_to_console=yes"
+            pxe_params+=" systemd.journald.forward_to_console=yes ipa-debug=1"
         fi
     fi
     # When booting with less than 1GB, we need to switch from default tmpfs
@@ -499,11 +501,13 @@ function stop_ironic {
 
 function create_ovs_taps {
     local ironic_net_id=$(neutron net-list | grep private | get_field 1)
+    die_if_not_set $LINENO ironic_net_id "Failed to get ironic network id"
 
     # Work around: No netns exists on host until a Neutron port is created.  We
     # need to create one in Neutron to know what netns to tap into prior to the
     # first node booting.
     local port_id=$(neutron port-create private | grep " id " | get_field 2)
+    die_if_not_set $LINENO port_id "Failed to create neutron port"
 
     # intentional sleep to make sure the tag has been set to port
     sleep 10
@@ -513,7 +517,9 @@ function create_ovs_taps {
     else
         local tapdev=$(sudo ip link list | grep " tap" | cut -d':' -f2 | cut -d'@' -f1 | cut -b2-)
     fi
+    die_if_not_set $LINENO tapdev "Failed to get tap device id"
     local tag_id=$(sudo ovs-vsctl show |grep ${tapdev} -A1 -m1 | grep tag | cut -d':' -f2 | cut -b2-)
+    die_if_not_set $LINENO tag_id "Failed to get tag id"
 
     # make sure veth pair is not existing, otherwise delete its links
     sudo ip link show ovs-tap1 && sudo ip link delete ovs-tap1
@@ -617,6 +623,7 @@ function enroll_nodes {
 
         # First node created will be used for testing in ironic w/o glance
         # scenario, so we need to know its UUID.
+        IRONIC_NODE_UUID=${IRONIC_NODE_UUID:-`uuidgen`}
         local standalone_node_uuid=$([ $total_nodes -eq 0 ] && echo "--uuid $IRONIC_NODE_UUID")
 
         local node_id=$(ironic node-create $standalone_node_uuid\
@@ -771,26 +778,22 @@ function upload_baremetal_ironic_deploy {
         fi
     fi
 
-    local token=$(openstack token issue -c id -f value)
-    die_if_not_set $LINENO token "Keystone fail to get token"
-
     # load them into glance
     IRONIC_DEPLOY_KERNEL_ID=$(openstack \
-        --os-token $token \
-        --os-url http://$GLANCE_HOSTPORT \
         image create \
         $(basename $IRONIC_DEPLOY_KERNEL_PATH) \
         --public --disk-format=aki \
         --container-format=aki \
         < $IRONIC_DEPLOY_KERNEL_PATH  | grep ' id ' | get_field 2)
+    die_if_not_set $LINENO IRONIC_DEPLOY_KERNEL_ID "Failed to load kernel image into glance"
+
     IRONIC_DEPLOY_RAMDISK_ID=$(openstack \
-        --os-token $token \
-        --os-url http://$GLANCE_HOSTPORT \
         image create \
         $(basename $IRONIC_DEPLOY_RAMDISK_PATH) \
         --public --disk-format=ari \
         --container-format=ari \
         < $IRONIC_DEPLOY_RAMDISK_PATH  | grep ' id ' | get_field 2)
+    die_if_not_set $LINENO IRONIC_DEPLOY_RAMDISK_ID "Failed to load ramdisk image into glance"
 }
 
 function prepare_baremetal_basic_ops {
